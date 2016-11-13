@@ -1,0 +1,136 @@
+<!--
+*@purpose : Visualforce Page responsible for Selecting the Object and Fields for LookUpAssignment
+*@author : Souvik    Date: 09.08.2013
+-->
+<apex:page controller="MFS.GetObjectNames" sidebar="false" standardStylesheets="false">
+
+<!-- Calling the external CSS to be used in the page -->
+<apex:stylesheet value="{!URLFOR($Resource.MFS__CssDesignS2SMigration)}"/>
+
+<!-- Calling the external Javascript to be used in the page -->
+<script type="text/javascript" src="{!URLFOR($Resource.JsDesignS2SMigration)}"/>
+<apex:form id="GetObjectNames">
+
+   <!-- Panel to display the Page Messages and Selected Object Labels -->
+   <apex:outputPanel id="pgMsg">
+       <apex:sectionHeader title="{!$Label.mfs__SectionHeaderLookUpAssign}" rendered="{!objectLabel != NULL}" id="SecHead" subtitle="{!objectLabel}"/>
+       <apex:sectionHeader title="{!$Label.mfs__SectionHeaderLookUpAssign}" rendered="{!objectLabel == NULL}" subtitle="{!$Label.mfs__SecHeaderTitle}"/>
+       <apex:outputPanel rendered="{!pageMsg != NULL}">
+           <apex:pagemessages />
+       </apex:outputPanel>
+   </apex:outputPanel>
+   
+   <!-- PageBlock for Dynamic LookUp Assignment -->
+   <apex:pageBlock id="block2" title="{!$Label.mfs__PageBlockTitle}">
+       
+       <!-- PageBlockSection to display the Object Selection Section -->
+       <apex:pageblocksection columns="2" title="{!$Label.mfs__PageBlockSecTitle}">
+          <apex:panelGrid >
+          <b><u>{!$Label.mfs__ObjSelectionMsg}</u> </b>
+          <apex:selectList value="{!objectName}" size="1">
+              <apex:actionSupport event="onchange" reRender="fieldtable,pgMsg" action="{!populateFieldTable}" 
+               status="myStatus">
+              </apex:actionSupport>
+              <apex:selectOptions value="{!objectNames}"/>
+          </apex:selectList>
+          </apex:panelGrid>
+          <apex:outputText value=""/>
+      </apex:pageblocksection>
+      
+      <!-- Panel to display the Field Selection Section -->
+      <apex:outputPanel id="fieldtable">
+          <apex:pageblocksection columns="1" title="{!$Label.mfs__PageBlockSecTitleFeilds}" 
+           rendered="{!visibleTable == 'InputTable' || visibleTable == 'OutputTable'}">
+              <apex:pageblocktable value="{!wrapListForDisplay}" var="fieldName" >
+                  <apex:column headerValue="{!$Label.mfs__FieldSelectionColFirst}">
+                      <apex:outputText value="{!fieldName.referenceFieldsLabel}"/>
+                  </apex:column>
+                  <apex:column headerValue="{!$Label.mfs__FieldSelectionColSecond}" 
+                   rendered="{!visibleTable == 'InputTable'}">
+                      <apex:selectList value="{!fieldName.textFields}" size="1" >
+                          <apex:selectOptions value="{!Fields}" />
+                      </apex:selectList>
+                  </apex:column>
+                  <apex:column headerValue="{!$Label.mfs__FieldSelectionColFourth}" 
+                   rendered="{!visibleTable == 'InputTable' && objectName != 'Task' && objectName != 'Event'}">
+                      <apex:selectList value="{!fieldName.selectedParentObjField}" size="1">
+                          <apex:selectOptions value="{!fieldName.parentObjFieldList}"/>
+                      </apex:selectList>
+                  </apex:column>
+                  <apex:column headerValue="{!$Label.mfs__FieldSelectionColThird}" 
+                   rendered="{!visibleTable == 'OutputTable'}">
+                      <apex:outputText value="{!fieldName.textFields}"/>
+                  </apex:column>
+                  <apex:column headerValue="{!$Label.mfs__FieldSelectionColFifth}" 
+                   rendered="{!visibleTable == 'OutputTable' && objectName != 'Task' && objectName != 'Event'}">
+                      <apex:outputText value="{!fieldName.selectedParentObjField}"/>
+                  </apex:column>
+              </apex:pageblocktable>
+              <apex:panelGroup >
+                  <apex:commandButton action="{!addFieldValues}" value="{!$Label.mfs__AddButton}" 
+                   rendered="{!visibleTable == 'InputTable'}"/>
+                  <apex:commandButton action="{!clearFieldValues}" value="{!$Label.mfs__ClearButton}" 
+                   rendered="{!visibleTable == 'InputTable'}"/>
+                  <apex:commandButton action="{!editFieldValues}" value="{!$Label.mfs__EditButton}" 
+                   rendered="{!visibleTable == 'OutputTable'}"/>
+                  <apex:commandButton action="{!callBatchApex}" value="{!$Label.mfs__AssignLookUpButton}" 
+                   immediate="true" onclick="return approveLookUpAssignment()" rendered="{!visibleTable == 'OutputTable'}"/>
+                   <apex:commandButton action="{!configure}" value="{!$Label.mfs__Configure}" reRender="PolyPopUp" 
+                   rendered="{!objectName == 'Task' || objectName == 'Event'}" status="status"/>
+                   <apex:actionStatus id="status">
+                       <apex:facet name="start">
+                            <apex:outputPanel >
+                            &nbsp;<apex:image value="http://cache.boston.com/universal/site_graphics/etaf/loading_icon.gif" style="height: 15px;"/>
+                            </apex:outputPanel>
+                       </apex:facet>
+                   </apex:actionStatus>
+              </apex:panelGroup>
+          </apex:pageblocksection>
+          <apex:outputPanel id="PolyPopUp">
+              <apex:outputPanel rendered="{!visibleTable == 'Configure'}">
+                  <apex:outputPanel styleClass="popupBackground">
+                      <apex:outputPanel styleClass="custPopup">
+                          <apex:commandLink action="{!cancelPolyFieldValues}" title="{!$Label.mfs__Cancel}" style="float:right;top:5%;right:26%;position:fixed;">
+                            <img src="http://www.tunesinthechurch.com/wp-content/uploads/X-button.png" alt="Close"/>
+                          </apex:commandLink>
+                          <apex:pageBlockSection title="{!$Label.mfs__PolymorphicFieldKeySel}" columns="2">
+                              <apex:pageblocktable value="{!polyWrapListForDisplay}" var="fieldName" >
+                                  <apex:column headerValue="{!$Label.mfs__PolymorphicObjName}">
+                                      <apex:outputText value="{!fieldName.objectLabel}"/>
+                                  </apex:column>
+                                  <apex:column headerValue="{!$Label.mfs__FieldSelectionColFourth}">
+                                      <apex:selectList value="{!fieldName.selectedField}" size="1">
+                                          <apex:selectOptions value="{!fieldName.parentObjFieldList}"/>
+                                      </apex:selectList>
+                                  </apex:column>
+                              </apex:pageblocktable>
+                              <apex:outputText value=""/>
+                              <apex:panelGroup >
+                              <apex:commandButton action="{!addPolyFieldValues}" value="{!$Label.mfs__AddButton}"/>
+                              <apex:commandButton action="{!cancelPolyFieldValues}" value="{!$Label.mfs__Cancel}"/>
+                              </apex:panelGroup>
+                          </apex:pageBlockSection>
+                      </apex:outputPanel>
+                  </apex:outputPanel>
+              </apex:outputPanel>
+          </apex:outputPanel>
+      </apex:outputPanel>
+  </apex:pageBlock>
+  
+  <!-- Action Status Section -->
+  <apex:actionStatus id="myStatus">
+    <apex:facet name="start">
+      <apex:outputPanel >
+          <div class="background">
+            <div class="transbox">
+                <p>
+                {!$Label.mfs__ActionStatusMsg}
+                <apex:image value="/img/loading32.gif" style="height: 15px;"/>
+                </p>
+            </div>
+          </div>
+      </apex:outputPanel>
+    </apex:facet>
+  </apex:actionStatus>
+ </apex:form>
+</apex:page>

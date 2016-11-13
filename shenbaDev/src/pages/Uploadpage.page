@@ -1,0 +1,29 @@
+<apex:page id="pgid" controller="Test">
+ <apex:form id="frm">
+  <input type="file" id="fileId" name="attFile" /><br/>
+  <apex:actionFunction name="passToController" action="{!doAttachment}" reRender="frm">
+   <apex:param name="fname" value="" assignTo="{!filename}" />
+   <apex:param name="body" value="" assignTo="{!body}"/>
+  </apex:actionFunction>
+  <apex:commandButton value="Save" onclick="remoteLocationPost();" />
+  <script>
+   var blobfile;
+   function getAsText(readFile) {
+    var reader = new FileReader();
+    reader.readAsDataURL(readFile);
+    reader.onload = attLoaded;
+   }
+   function attLoaded(evt) {  
+    var fileString = evt.target.result;
+    blobfile = fileString;
+    var  input = document.getElementById("fileId");
+    var filename= input.value;          
+    passToController(filename,blobfile);
+   }
+   function remoteLocationPost(){
+    var fbody= document.getElementById("fileId").files[0];
+    getAsText(fbody); 
+   }   
+  </script>
+ </apex:form>
+</apex:page>

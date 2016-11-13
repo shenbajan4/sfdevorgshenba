@@ -1,0 +1,251 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomLabels xmlns="http://soap.sforce.com/2006/04/metadata">
+    <labels>
+        <fullName>ActionStatusMsg</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>ActionStatusMsg</shortDescription>
+        <value>Processing.....</value>
+    </labels>
+    <labels>
+        <fullName>AddButton</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>AddButton</shortDescription>
+        <value>Add</value>
+    </labels>
+    <labels>
+        <fullName>AssignLookUpButton</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>AssignLookUpButton</shortDescription>
+        <value>Assign LookUps</value>
+    </labels>
+    <labels>
+        <fullName>AvailableCon</fullName>
+        <categories>Source Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>AvailableCon</shortDescription>
+        <value>Available Connections</value>
+    </labels>
+    <labels>
+        <fullName>Cancel</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>Cancel</shortDescription>
+        <value>Cancel</value>
+    </labels>
+    <labels>
+        <fullName>ChildColSecond</fullName>
+        <categories>Source Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>ChildColSecond</shortDescription>
+        <value>Child Objects</value>
+    </labels>
+    <labels>
+        <fullName>ChildObj</fullName>
+        <categories>Source Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>ChildColFirst</shortDescription>
+        <value>Select</value>
+    </labels>
+    <labels>
+        <fullName>ClearButton</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>ClearButton</shortDescription>
+        <value>Clear</value>
+    </labels>
+    <labels>
+        <fullName>Configure</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>Configure</shortDescription>
+        <value>Configure</value>
+    </labels>
+    <labels>
+        <fullName>EditButton</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>EditButton</shortDescription>
+        <value>Edit</value>
+    </labels>
+    <labels>
+        <fullName>FieldSelectionColFifth</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>FieldSelectionColFifth</shortDescription>
+        <value>Selected Old Record Id Value for Respective Parent Objects</value>
+    </labels>
+    <labels>
+        <fullName>FieldSelectionColFirst</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>FieldSelectionColFirst</shortDescription>
+        <value>Reference Fields To Be Assigned</value>
+    </labels>
+    <labels>
+        <fullName>FieldSelectionColFourth</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>FieldSelectionColFourth</shortDescription>
+        <value>Select Old Record Id Value for Respective Parent Objects</value>
+    </labels>
+    <labels>
+        <fullName>FieldSelectionColSecond</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>FieldSelectionColSecond</shortDescription>
+        <value>Select Old Reference Values for respective Fields</value>
+    </labels>
+    <labels>
+        <fullName>FieldSelectionColThird</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>FieldSelectionColThird</shortDescription>
+        <value>Selected Old Reference Values for respective Fields</value>
+    </labels>
+    <labels>
+        <fullName>ForSelecting</fullName>
+        <categories>Source Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>ForSelecting</shortDescription>
+        <value>&gt;&gt;</value>
+    </labels>
+    <labels>
+        <fullName>ForUnselecting</fullName>
+        <categories>Source Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>ForUnselecting</shortDescription>
+        <value>&lt;&lt;</value>
+    </labels>
+    <labels>
+        <fullName>ObjSelectionMsg</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>ObjSelectionMsg</shortDescription>
+        <value>Select the Object you want to assign:</value>
+    </labels>
+    <labels>
+        <fullName>PageBlockSecTitle</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>PageBlockSecTitle</shortDescription>
+        <value>Object Selection Section</value>
+    </labels>
+    <labels>
+        <fullName>PageBlockSecTitleChildObjs</fullName>
+        <categories>Source Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>PageBlockSecTitleChildObjs</shortDescription>
+        <value>Child Object Selection Section</value>
+    </labels>
+    <labels>
+        <fullName>PageBlockSecTitleConnection</fullName>
+        <categories>Source Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>PageBlockSecTitleConnection</shortDescription>
+        <value>Connection Selection Section</value>
+    </labels>
+    <labels>
+        <fullName>PageBlockSecTitleFeilds</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>PageBlockSecTitleFeilds</shortDescription>
+        <value>Field Selection Section</value>
+    </labels>
+    <labels>
+        <fullName>PageBlockTitle</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>PageBlockTitle</shortDescription>
+        <value>Dynamic LookUp Assignment</value>
+    </labels>
+    <labels>
+        <fullName>PageBlockTitleSrc</fullName>
+        <categories>Source Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>PageBlockTitleSrc</shortDescription>
+        <value>Data Migration Section</value>
+    </labels>
+    <labels>
+        <fullName>PolymorphicFieldKeySel</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>PolymorphicFieldKeySel</shortDescription>
+        <value>Polymorphic Field Old Primary Key Selection Section</value>
+    </labels>
+    <labels>
+        <fullName>PolymorphicObjName</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>PolymorphicObjName</shortDescription>
+        <value>Object Name</value>
+    </labels>
+    <labels>
+        <fullName>SecHeaderTitle</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>SecHeaderTitle</shortDescription>
+        <value>No Object Selected</value>
+    </labels>
+    <labels>
+        <fullName>SectionHeaderLookUpAssign</fullName>
+        <categories>Target Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>SectionHeaderLookUpAssign</shortDescription>
+        <value>LookUp Assignment</value>
+    </labels>
+    <labels>
+        <fullName>SectionHeaderMigration</fullName>
+        <categories>Source Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>SectionHeaderMigration</shortDescription>
+        <value>S2S Migration</value>
+    </labels>
+    <labels>
+        <fullName>SelectedCon</fullName>
+        <categories>Source Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>SelectedCon</shortDescription>
+        <value>Selected Connections</value>
+    </labels>
+    <labels>
+        <fullName>ShareRecordButton</fullName>
+        <categories>Source Org Label</categories>
+        <language>en_US</language>
+        <protected>true</protected>
+        <shortDescription>ShareRecordButton</shortDescription>
+        <value>Share Records</value>
+    </labels>
+</CustomLabels>

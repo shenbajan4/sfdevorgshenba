@@ -1,0 +1,53 @@
+<apex:page showheader="true" 
+    sidebar="true" 
+    standardController="PDRI__DataSet__c" 
+    extensions="PDRI.DataSetEditorController" 
+    title="Deleting Data Set">
+    
+    <apex:stylesheet value="{!URLFOR($Resource.PDRI__bootstrap, 'bootstrap-sf1-0.1.0-beta.15-dist/dist/css/bootstrap-namespaced.min.css')}"/>
+    
+	<script>
+		function showProgressPanel() {
+    		document.getElementById('{!$Component.theForm.progressPanel}').style.display = 'block';
+        }
+                
+    	function hideProgressPanel() {
+    		document.getElementById('{!$Component.theForm.progressPanel}').style.display = 'none';
+        }
+        
+       	function progressIndicatorBar(stageNumber) {
+        	var isStop = stageNumber > 100;
+            if( isStop ) {
+            	return;
+            }
+                
+            var nextStageNumber = stageNumber + 1;
+            document.getElementById('progressBarElement').style.width = nextStageNumber + '%';
+                    
+            setTimeout('progressIndicatorBar(' + nextStageNumber + ')', 200);
+    	}
+    	
+    	function endDelete() {
+    		hideProgressPanel();
+    		window.location.href = '{!URLFOR($Action.DataSet__c.Tab,$ObjectType.DataSet__c)}';
+    	}
+    	
+    	window.onload = function(e) {
+    		console.log("window loaded");
+			showProgressPanel();
+    		progressIndicatorBar(0);
+    		deleteDataSet();
+        };
+    	
+	</script>
+	
+	<apex:form id="theForm" style="padding-left: 20px; padding-top: 20px;">
+		<apex:actionFunction action="{!onDelete}" name="deleteDataSet" rerender="theForm" oncomplete="endDelete();"/>
+		
+		<apex:outputPanel id="progressPanel" layout="block" styleClass="bootstrap-sf1" style="display: none; margin-right: 20px; margin-top: 10%; background-color: white;">
+				<div class="progress">
+		    		<div id="progressBarElement" class="progress-bar progress-bar-success" role="progressbar" aria-valuenow="40" aria-valuemin="0" aria-valuemax="100" style="width: 0%"><span class="sr-only">Deleting</span></div>
+		  		</div>
+		</apex:outputPanel>
+	</apex:form>
+</apex:page>

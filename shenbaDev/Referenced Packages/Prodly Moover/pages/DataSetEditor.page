@@ -1,0 +1,887 @@
+<apex:page showheader="{! IF( NOT ISNULL( $CurrentPage.parameters.showheadersidebar ), $CurrentPage.parameters.showheadersidebar, 'true' ) }" 
+    sidebar="{! IF( NOT ISNULL( $CurrentPage.parameters.showsidebar ), $CurrentPage.parameters.showsidebar, 'true' ) }" 
+    standardController="PDRI__DataSet__c" 
+    extensions="PDRI.DataSetEditorController" 
+    standardStylesheets="false"
+    title="{! IF(objectNode.dataSetWrapper.dataSet.Id = NULL, 'Deployment Data Set Editor', objectNode.dataSetWrapper.dataSet.Name + ' - Data Set') }">
+    
+    <script src="/soap/ajax/35.0/connection.js"></script>
+    <script src="/soap/ajax/35.0/apex.js" type="text/javascript"></script>
+
+
+    <apex:stylesheet value="{!URLFOR($Resource.PDRI__SLDS080, 'SLDS080/assets/styles/salesforce-lightning-design-system-vf.css')}"/>
+
+    <style type="text/css">
+        .invert-icon {
+            -webkit-filter:invert(60%);
+            filter:invert(65%);
+            height: 15px !important;
+        }
+        
+        .button-group-menu {
+            margin-left: 25% !important;
+            width: 82% !important;
+        }
+        
+        .second-breadcrumb {
+            margin-left: 0px !important;
+        }
+        
+        .narrow-action-dropdown {
+            margin-right: 50px !important;
+            min-width: 0px !important;
+            margin-top: 40px !important;
+        }
+    </style>
+    
+    <script>
+        function queryCount(objectName, queryQualifiers) {
+            //alert("object name: " + objectName);
+            //alert("queryQualifiers: " + queryQualifiers);
+            sforce.connection.sessionId = "{!$Api.Session_ID}";
+            var query = "SELECT count() FROM " + objectName + ( queryQualifiers == null || queryQualifiers == "" ? "" : " WHERE " + queryQualifiers );
+            
+            sforce.connection.query(query,
+               { onSuccess : queryCountPassed,
+                 onFailure : queryCountFailed,
+                 source : {
+                     output : document.getElementById("output"),
+                     startTime : new Date().getTime()
+                 }
+           });
+
+        }
+        
+        function queryCountFailed(error, source) {
+            var countResult = error.get("faultstring");
+            errorQueryCount(countResult);
+        }
+        
+        function queryCountPassed(queryResult, source) {
+            var countResult = queryResult.getInt("size");
+            updateQueryCount(countResult);
+        }
+   
+        function endDeleteDataSet() {
+            window.location.href = '{!URLFOR($Action.DataSet__c.Tab,$ObjectType.DataSet__c)}'
+            //hideElemVisibility("progressSpinner");
+            //showElemVisibility("settingsPanel");
+        }
+        
+        function startClone() {
+            hideElemVisibility("settingsPanel");
+            showElemVisibility("progressSpinner");
+            clone();
+        }
+        
+        function startDeleteDataSet() {
+            if( !confirm('Are you sure, all data sets in this graph, including parent and children will be deleted?') ) { return false; }
+            
+            hideElemVisibility("settingsPanel");
+            showElemVisibility("progressSpinner");
+            deleteDataSet();
+        }
+        
+        function startDeploy() {
+            hideElemVisibility("settingsPanel");
+            showElemVisibility("progressSpinner");
+            deploy();
+        }
+        
+        function endDeploy(dataSetId) {
+            if( (typeof sforce != 'undefined') && (sforce != null) && (sforce.one != null) ) {
+                window.location.href = '/apex/DeployDataSet?id=' + dataSetId + '&showheadersidebar=false&sidebar=false';
+            } else {
+                window.location.href = '/apex/DeployDataSet?id=' + dataSetId;
+            }
+        }
+            
+        function toggleFieldSettings() {
+            toggleElemVisibility("fieldSettingsDialog");
+        }
+        
+        function startSave() {
+            hideElemVisibility("settingsPanel");
+            showElemVisibility("progressSpinner");
+            save();
+        }
+        
+        function endSave() {
+            hideElemVisibility("progressSpinner");
+            showElemVisibility("settingsPanel");
+        }
+        
+        function startActionSelect() {
+            hideElemVisibility("settingsPanel");
+            showElemVisibility("progressSpinner");
+        }
+        
+        function endActionSelect() {
+            hideElemVisibility("progressSpinner");
+            showElemVisibility("settingsPanel");
+        }
+        
+        function toggleMainActions() {
+            toggleElemVisibility("mainActionsDropdown");
+        }
+        
+        function setDeployButtonDisable(isActive) {
+            if( !{!objectNode.dataSetWrapper.dataSet.PDRI__Root__c} ) {
+                return;
+            }
+            
+            if( isActive ) {
+                document.getElementById('deployButton').disabled = false;
+            } else {
+                document.getElementById('deployButton').disabled = true;
+            }
+        }
+    
+        function deactivateElem(elemId) {
+            var elem = document.getElementById(elemId);
+            if( !elem ) {
+                return;
+            }
+            
+            var elemClass = elem.getAttribute("class");
+            
+            if( elemClass.indexOf("slds-active") != -1 ) {
+                elemClass = elemClass.replace("slds-active", "");
+                elem.setAttribute("class", elemClass);
+            }
+        }
+         
+        function activateElem(elemId) {
+            var elem = document.getElementById(elemId);
+            var elemClass = elem.getAttribute("class");
+            
+            if( elemClass.indexOf("slds-active") == -1 ) {
+                elemClass = elemClass + " slds-active";
+                elem.setAttribute("class", elemClass);
+            }
+        }
+        
+        function hideElemVisibility(elemId) {
+            var elem = document.getElementById(elemId);
+            if( !elem ) {
+                return;
+            }
+            
+            var elemClass = elem.getAttribute("class");
+            
+            if( elemClass.indexOf("slds-show") != -1 ) {
+                elemClass = elemClass.replace("slds-show", "slds-hide");
+                elem.setAttribute("class", elemClass);
+            }
+        }
+         
+        function showElemVisibility(elemId) {
+            var elem = document.getElementById(elemId);
+            var elemClass = elem.getAttribute("class");
+            
+            if( elemClass.indexOf("slds-hide") != -1 ) {
+                elemClass = elemClass.replace("slds-hide", "slds-show");
+                elem.setAttribute("class", elemClass);
+            }
+        }
+        
+        function toggleElemVisibility(elemId) {
+            var elem = document.getElementById(elemId);
+            var elemClass = elem.getAttribute("class");
+            
+            if( elemClass.indexOf("slds-show") != -1 ) {
+                elemClass = elemClass.replace("slds-show", "slds-hide");
+            } else {
+                elemClass = elemClass.replace("slds-hide", "slds-show");
+            }
+            
+            elem.setAttribute("class", elemClass);
+        }
+
+        function openTab(tabIndex) {
+            if( tabIndex == 1 ) {
+                showElemVisibility("tab-settings");
+                hideElemVisibility("tab-fields");
+                hideElemVisibility("tab-parents");
+                hideElemVisibility("tab-children");
+                
+                activateElem("tab-settings-item");
+                deactivateElem("tab-fields-item");
+                deactivateElem("tab-parents-item");
+                deactivateElem("tab-children-item");
+            } else if( tabIndex == 2 ) {
+                showElemVisibility("tab-fields");
+                hideElemVisibility("tab-settings");
+                hideElemVisibility("tab-parents");
+                hideElemVisibility("tab-children");
+                
+                deactivateElem("tab-settings-item");
+                activateElem("tab-fields-item");
+                deactivateElem("tab-parents-item");
+                deactivateElem("tab-children-item");
+            } else if( tabIndex == 3 ) {
+                showElemVisibility("tab-parents");
+                hideElemVisibility("tab-settings");
+                hideElemVisibility("tab-fields");
+                hideElemVisibility("tab-children");
+                
+                deactivateElem("tab-settings-item");
+                deactivateElem("tab-fields-item");
+                activateElem("tab-parents-item");
+                deactivateElem("tab-children-item");
+            } else if( tabIndex == 4 ) {
+                showElemVisibility("tab-children");
+                hideElemVisibility("tab-settings");
+                hideElemVisibility("tab-fields");
+                hideElemVisibility("tab-parents");
+                
+                deactivateElem("tab-settings-item");
+                deactivateElem("tab-fields-item");
+                deactivateElem("tab-parents-item");
+                activateElem("tab-children-item");
+            }
+        }
+    </script>
+    
+    <apex:form id="theForm">
+       <script>
+           if( {!objectNode.dataSetWrapper.dataSet.PDRI__Root__c} ) {
+               queryCount("{!objectNode.dataSetWrapper.dataSet.PDRI__ObjectName__c}", "{! JSENCODE(objectNode.dataSetWrapper.dataSet.Query_Filter__c) }");
+           }
+       </script>
+       
+       <apex:actionFunction action="{!onParentConfigure}" name="parentConfigure" rerender="theForm">
+            <apex:param name="parentSelected" value="parentSelected" assignTo="{!parentSelected}"/>
+        </apex:actionFunction>
+        <apex:actionFunction name="rerenderFieldSettings" rerender="fieldPanel"/>
+        <apex:actionFunction action="{!onClickFieldSettings}" name="openFieldSettingsDialog" rerender="fieldPanel" oncomplete="toggleFieldSettings(); return false;">
+            <apex:param name="fieldSelected" value="fieldSelected" assignTo="{!fieldSelected}"/>
+        </apex:actionFunction>
+        <apex:actionFunction action="{!onSave}" name="save" rerender="failureAlertOutterPanel,successAlertOutterPanel" oncomplete="endSave();"/>
+        <apex:actionFunction action="{!onClone}" name="clone" rerender="theForm"/>
+        <apex:actionFunction action="{!onDelete}" name="deleteDataSet" rerender="theForm" oncomplete="endDeleteDataSet();"/>
+        <apex:actionFunction action="{!onDeploy}" name="deploy" oncomplete="if( !{!isFailureAlertShown}) { endDeploy('{!rootDataSet.Id}'); }" rerender="theForm"/>
+        <apex:actionFunction action="{!onSearchFields}" name="searchFields" rerender="objectFieldsTable">
+            <apex:param name="objectSearchTerm" value="{!objectSearchTerm}" assignTo="{!objectSearchTerm}"/>
+        </apex:actionFunction>
+        <apex:actionFunction action="{!onSearchChildren}" name="searchChildrenNamespace" rerender="childrenPanel"/>
+        <apex:actionFunction action="{!onSearchChildren}" name="searchChildren" rerender="childrenPanel,objectChildrenNamespaceSearchPanel"/>
+        <apex:actionFunction action="{!onDismissAlert}" name="dismissAlert" rerender="theForm"/>
+        <apex:actionFunction action="{!onNavToNode}" name="navToNode" rerender="theForm">
+            <apex:param name="navToNodeIndex" value="{!navToNodeIndex}" assignTo="{!navToNodeIndex}"/>
+        </apex:actionFunction>
+        <apex:actionFunction action="{!onUpdateQueryFilter}" name="updateQueryCount" rerender="deploymentPreviewPanel,failureAlertOutterPanel">
+            <apex:param name="countResult" value="{!countResult}" assignTo="{!countResult}"/>
+        </apex:actionFunction>
+        <apex:actionFunction action="{!onErrorQueryFilter}" name="errorQueryCount" rerender="deploymentPreviewPanel,failureAlertOutterPanel">
+            <apex:param name="countResult" value="{!countResult}" assignTo="{!countResult}"/>
+        </apex:actionFunction>
+        
+        <div class="slds">
+            <div id="progressSpinner" class="slds-hide">
+                <div class="slds-grid slds-grid--align-center slds-m-vertical--xx-large">
+                    <div class="slds-spinner--large slds-m-vertical--xx-large">
+                        <img class="slds-m-vertical--xx-large" src="/resource/PDRI__SLDS080/SLDS080/assets/images/spinners/slds_spinner_brand.gif" alt="Loading..." />
+                    </div>
+                </div>
+            </div>
+            
+            <div id="settingsPanel" class="slds-show">
+                <div class="slds-page-header" role="banner">
+                    <nav class="slds-m-bottom--xx-small" role="navigation">
+                        <p id="bread-crumb-label" class="slds-assistive-text">You are here:</p>
+                        <ol class="slds-breadcrumb slds-list--horizontal" aria-labelledby="bread-crumb-label">
+                            <apex:repeat value="{!objectNodes}" var="objectNode">
+                                <li class="slds-list__item slds-text-heading--label second-breadcrumb"><a href="javascript:navToNode('{!objectNode.index}');">{!objectNode.label}</a></li>
+                            </apex:repeat>
+                        </ol>
+                    </nav>
+                    <div class="slds-grid">
+                        <div class="slds-col slds-has-flexi-truncate">
+                            <h1 class="slds-text-heading--medium slds-truncate" title="{! 'Data Set - ' + objectNode.dataSetWrapper.dataSet.Name }">{! 'Data Set - ' + objectNode.dataSetWrapper.dataSet.Name }</h1>
+                        </div>
+                        <apex:outputPanel layout="block" rendered="{! !objectNode.dataSetWrapper.dataSet.Root__c }">  
+                            <div class="slds-col slds-no-flex slds-align-bottom">
+                                <div class="slds-grid">
+                                    <div class="slds-button-group">                          
+                                        <button id="deployButton" onclick="startDeploy(); return false;" class="slds-button slds-button--neutral">Deploy</button>
+                                        <button onclick="startSave(); return false;" class="slds-button slds-button--neutral">Save</button>
+                                        <button onclick="if( !confirm('Are you sure, all unsaved changes will be lost?') ) { return false; } window.location.href = '{!URLFOR($Action.DataSet__c.Tab,$ObjectType.DataSet__c)}'; return false;" class="slds-button slds-button--neutral">Cancel</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </apex:outputPanel>
+                        <apex:outputPanel layout="block" rendered="{!objectNode.dataSetWrapper.dataSet.PDRI__Root__c}">  
+                            <div class="slds-col slds-no-flex slds-align-bottom">
+                                <div class="slds-grid">
+                                    <div class="slds-button-group">                          
+                                        <button id="deployButton" onclick="startDeploy(); return false;" class="slds-button slds-button--neutral">Deploy</button>
+                                        <button onclick="startSave(); return false;" class="slds-button slds-button--neutral">Save</button>
+                                        <button onclick="if( !confirm('Are you sure, all unsaved changes will be lost?') ) { return false; } window.location.href = '{!URLFOR($Action.DataSet__c.Tab,$ObjectType.DataSet__c)}'; return false;" class="slds-button slds-button--neutral">Cancel</button>
+                                        <div class="slds-button--last">
+                                            <button onclick="toggleMainActions(); return false;" class="slds-button slds-button--icon-border-filled">
+                                                <img class="invert-icon" src="/resource/PDRI__SLDS080/SLDS080/assets/icons/utility/down_60.png" alt="Down" />
+                                                <span class="slds-assistive-text">More Actions</span>
+                                            </button>
+                                        </div>
+                                        <div id="mainActionsDropdown" class="button-group-menu slds-popover slds-hide">
+                                            <div class="narrow-action-dropdown slds-dropdown slds-dropdown--right slds-dropdown--medium slds-dropdown--menu" style="margin-right:-1rem;">
+                                                <ul class="slds-dropdown__list" role="menu">
+                                                    <li id="menu-3-0" class="slds-dropdown__item"><a role="menuitemradio" class="slds-truncate" href="javascript:startDeleteDataSet();">Delete</a></li>
+                                                    <li id="menu-4-1" class="slds-dropdown__item"><a role="menuitemradio" class="slds-truncate" href="javascript:startClone();">Clone</a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                           <script>
+                                setDeployButtonDisable({!rootDataSet.Active__c});
+                           </script>
+                        </apex:outputPanel>
+                    </div>
+                </div>
+            	
+                <apex:outputPanel id="successAlertOutterPanel">
+                    <apex:outputPanel id="successAlertPanel" layout="block" rendered="{!isSuccessAlertShown}">
+                        <div class="slds-grid slds-m-top--large">
+                            <div class="slds-notify slds-notify--alert slds-theme--success slds-theme--inverse-text slds-theme--alert-texture slds-size--1-of-1" role="alert">
+                                <span class="slds-assistive-text">Info</span>
+                                <button onclick="dismissAlert(); return false;" class="slds-button slds-button--icon-inverse slds-notify__close">
+                                    <img src="/resource/PDRI__SLDS080/SLDS080/assets/icons/action/close_60.png" alt="Close" class="slds-button__icon" />
+                                    <span class="slds-assistive-text">Close</span>
+                                </button>
+                                <h2>{!alertMessage}</h2>
+                            </div>
+                        </div>
+                    </apex:outputPanel>
+                </apex:outputPanel>
+                
+                <apex:outputPanel id="failureAlertOutterPanel"> 
+                    <apex:outputPanel id="failureAlertPanel" layout="block" rendered="{!isFailureAlertShown}">                      
+                        <div class="slds-grid slds-m-top--large">
+                            <div class="slds-notify slds-notify--alert slds-theme--error slds-theme--inverse-text slds-theme--alert-texture slds-size--1-of-1" role="alert">
+                                <span class="slds-assistive-text">Info</span>
+                                <button onclick="dismissAlert(); return false;" class="slds-button slds-button--icon-inverse slds-notify__close">
+                                    <img src="/resource/PDRI__SLDS080/SLDS080/assets/icons/action/close_60.png" alt="Close" class="slds-button__icon" />
+                                    <span class="slds-assistive-text">Close</span>
+                                </button>
+                                <h2>{!alertMessage}</h2>
+                            </div>
+                        </div>
+                    </apex:outputPanel>
+                </apex:outputPanel>
+            
+                <div class="slds-grid slds-m-top--large">
+                    <div class="slds-tabs--default">
+                        <ul class="slds-tabs--default__nav" role="tablist">
+                            <li id="tab-settings-item" class="slds-tabs__item slds-text-heading--label slds-active" title="Record Configuration" role="presentation"><a href="javascript:openTab(1);" role="tab" tabindex="0" aria-selected="true" aria-controls="tab-settings">Record Configuration</a></li>
+                            <li id="tab-fields-item" class="slds-tabs__item slds-text-heading--label" title="Record Fields" role="presentation"><a href="javascript:openTab(2);" role="tab" tabindex="-1" aria-selected="false" aria-controls="tab-fields">Record Fields</a></li>
+                            <li id="tab-parents-item" class="slds-tabs__item slds-text-heading--label" title="Parent Records" role="presentation"><a href="javascript:openTab(3);" role="tab" tabindex="-1" aria-selected="false" aria-controls="tab-parents">Parent Records</a></li>
+                            <li id="tab-children-item" class="slds-tabs__item slds-text-heading--label" title="Child Records" role="presentation"><a href="javascript:openTab(4);" role="tab" tabindex="-1" aria-selected="false" aria-controls="tab-children">Child Records</a></li>
+                        </ul>
+                        <div id="tab-settings" class="slds-tabs__content slds-show" role="tabpanel">
+                            <!-- <h2>Record Configuration</h2> -->
+    
+                            <div role="form" class="slds-form--stacked slds-grid slds-wrap slds-m-top--large">
+                                <div class="slds-col--padded slds-size--1-of-1 slds-medium-size--1-of-2">
+                                    <div class="slds-form-element">
+                                        <label class="slds-form-element__label" for="dataSetNameInput">Data Set Name</label>
+                                        <div class="slds-form-element__control">
+                                            <apex:inputField value="{!objectNode.dataSetWrapper.dataSet.Name}" id="dataSetNameInput" styleClass="slds-input" html-placeholder="Name your data set..."/>
+                                        </div>
+                                    </div>
+                                    <apex:outputPanel rendered="{! objectNode.dataSetWrapper.dataSet.Root__c }">
+                                        <div class="slds-form-element slds-m-top--x-small">
+                                            <label class="slds-form-element__label" for="dataSetNameInput">Data Set Description</label>
+                                            <div class="slds-form-element__control">
+                                                <apex:inputField value="{!objectNode.dataSetWrapper.dataSet.PDRI__Description__c}" id="dataSetDescriptionInput" styleClass="slds-input" html-placeholder="Optional data set description..."/>
+                                            </div>
+                                        </div>
+                                    </apex:outputPanel>
+                                    <div class="slds-form-element slds-m-top--x-small">
+                                        <label class="slds-form-element__label" for="selectSample1">Deployment Object</label>
+                                        <div class="slds-form-element__control">
+                                            <apex:selectList disabled="{! NOT(objectNode.index == 0) }" value="{!objectNode.dataSetWrapper.dataSet.PDRI__ObjectName__c}" size="1" required="true" styleClass="slds-select"> 
+                                                <apex:selectOptions value="{!objectOptions}"/>
+                                                <apex:actionSupport event="onchange" action="{!onObjectSelect}" rerender="theForm" onsubmit="startActionSelect();" oncomplete="endActionSelect();"/> 
+                                            </apex:selectList>
+                                        </div>
+                                    </div>
+                                    <div class="slds-form-element slds-m-top--large">
+                                        <label class="slds-form-element__label" for="selectSample1">Upsert</label>
+                                        <div class="slds-form-element__control">
+                                            <apex:inputField value="{!objectNode.dataSetWrapper.dataSet.PDRI__Custom_Upsert_Record_Handling__c}" styleClass="slds-select">
+                                                <apex:actionSupport event="onchange" action="{!onUpsertClick}" rerender="fieldPanel,objectFieldsTable" />
+                                            </apex:inputField>
+                                            
+                                        </div>
+                                    </div>
+                                    <div class="slds-form-element slds-m-top--large">
+                                        <label class="slds-form-element__label" for="textarea">Query Filter</label>
+                                        <div class="slds-form-element__control">
+                                            <!-- <textarea id="textarea" class="slds-textarea" placeholder="Enter optional query filter starting after the WHERE clause (for example: IsActive = true)"></textarea>  -->
+                                            
+                                            <apex:inputField id="queryFilterInput" value="{!objectNode.dataSetWrapper.dataSet.PDRI__Query_Filter__c}" styleClass="slds-textarea" html-placeholder="Enter optional query filter starting after the WHERE clause (for example: IsActive = true)">
+                                                <apex:actionSupport event="onblur" onsubmit="queryCount('{!objectNode.dataSetWrapper.dataSet.PDRI__ObjectName__c}', document.getElementById('{!$Component.theForm.queryFilterInput}').value); return false;" />     
+                                            </apex:inputField>
+                                        </div>
+                                    </div>
+                                    <apex:outputPanel id="deploymentPreviewPanel" layout="block" rendered="{! objectNode.dataSetWrapper.dataSet.Root__c }">
+                                        <div class="slds-form-element slds-m-top--small">
+                                            <label class="slds-form-element__label" for="textarea">Deployment Preview</label>
+                                            <div class="slds-form-element__control">
+                                                <apex:outputText styleClass="slds-text-body--regular" value="{!objectNode.dataSetWrapper.recordsToDeployLabel}"/>
+                                            </div>
+                                        </div>
+                                    </apex:outputPanel>
+                                </div>
+                                <div class="slds-col--padded slds-size--1-of-1 slds-medium-size--1-of-2">
+                                    <apex:outputPanel id="settingsPanel">
+                                        <fieldset class="slds-form-element">
+                                            <div class="slds-form-element__control slds-m-top--small">
+                                                <label class="slds-checkbox">
+                                                    <apex:inputField value="{!objectNode.dataSetWrapper.dataSet.PDRI__Active__c}">
+                                                        <apex:actionSupport event="onclick" rerender="" oncomplete="setDeployButtonDisable({!objectNode.dataSetWrapper.dataSet.PDRI__Active__c}); return false;"/>
+                                                    </apex:inputField>
+                                                    <span class="slds-checkbox--faux"></span>
+                                                    <span class="slds-form-element__label">Active</span>
+                                                </label>
+                                            </div>
+                                            <apex:outputPanel rendered="{!objectNode.dataSetWrapper.isOwnerField}">
+                                                <div class="slds-form-element__control slds-m-top--small">
+                                                    <label class="slds-checkbox">
+                                                        <apex:inputField value="{!objectNode.dataSetWrapper.dataSet.PDRI__Replicate_Owner__c}" />
+                                                        <span class="slds-checkbox--faux"></span>
+                                                        <span class="slds-form-element__label">Replicate Owner</span>
+                                                    </label>
+                                                </div>
+                                            </apex:outputPanel>
+                                            <div class="slds-form-element__control slds-m-top--small">
+                                                <label class="slds-checkbox">
+                                                    <apex:inputField value="{!objectNode.dataSetWrapper.dataSet.PDRI__Replicate_Record_Type__c}" />
+                                                    <span class="slds-checkbox--faux"></span>
+                                                    <span class="slds-form-element__label">Replicate Record Type</span>
+                                                </label>
+                                            </div>
+                                            <apex:outputPanel rendered="{! objectNode.dataSetWrapper.dataSet.Root__c }">
+                                                <div class="slds-form-element__control slds-m-top--small">
+                                                    <label class="slds-checkbox">
+                                                        <apex:inputField value="{!objectNode.dataSetWrapper.dataSet.PDRI__Create_Missing__c}" />
+                                                        <span class="slds-checkbox--faux"></span>
+                                                        <span class="slds-form-element__label">Create Missing Fields</span>
+                                                    </label>
+                                                </div>
+                                            </apex:outputPanel>
+                                            <apex:outputPanel rendered="{! objectNode.dataSetWrapper.dataSet.Root__c }">
+                                                <div class="slds-form-element__control slds-m-top--small">
+                                                    <label class="slds-checkbox">
+                                                        <apex:inputField value="{!objectNode.dataSetWrapper.dataSet.PDRI__Sync_Picklist_Values__c}" />
+                                                        <span class="slds-checkbox--faux"></span>
+                                                        <span class="slds-form-element__label">Sync Picklist Field Values</span>
+                                                    </label>
+                                                </div>
+                                            </apex:outputPanel>
+                                            <apex:outputPanel rendered="{! !objectNode.dataSetWrapper.dataSet.Root__c }">
+                                                <div class="slds-form-element__control slds-m-top--small">
+                                                    <label class="slds-checkbox">
+                                                        <apex:inputField value="{!objectNode.dataSetWrapper.dataSet.PDRI__Ignore_Relationship_Constraints__c}">
+                                                        </apex:inputField>
+                                                        <span class="slds-checkbox--faux"></span>
+                                                        <span class="slds-form-element__label">Ignore Relationship Constraint</span>
+                                                    </label>
+                                                </div>
+                                            </apex:outputPanel>
+                                            <apex:outputPanel rendered="{! objectNode.dataSetWrapper.dataSet.Root__c }">
+                                                <div class="slds-form-element__control slds-m-top--small">
+                                                    <label class="slds-checkbox">
+                                                        <apex:inputField value="{!objectNode.dataSetWrapper.dataSet.PDRI__Ignore_Namespace__c}">
+                                                            <apex:actionSupport event="onclick" rerender="ignoreNamespaceNameBlock" />
+                                                        </apex:inputField>
+                                                        <span class="slds-checkbox--faux"></span>
+                                                        <span class="slds-form-element__label">Ignore Namespace</span>
+                                                    </label>
+                                                </div>
+                                            </apex:outputPanel>
+                                            <apex:outputPanel id="ignoreNamespaceNameBlock" layout="block">
+                                                <apex:outputPanel layout="block" rendered="{!objectNode.dataSetWrapper.dataSet.PDRI__Ignore_Namespace__c}">
+                                                    <div class="slds-form-element__control slds-m-top--small">
+                                                        <div class="slds-form-element__control">
+                                                            <apex:inputText id="ignoreNamespaceNameInput" html-placeholder="Optional namespace restriction." value="{!objectNode.dataSetWrapper.dataSet.PDRI__Ignore_Namespace_Name__c}" styleClass="slds-input slds-medium-size--2-of-3"/>
+                                                        </div>
+                                                    </div>
+                                                </apex:outputPanel>
+                                            </apex:outputPanel>
+                                        </fieldset>
+                                    </apex:outputPanel>
+                                </div>
+                                <!--  <apex:outputPanel id="overrideAttributesPanel" layout="block" style="margin-top: 10px; background-color: white;" styleClass="bootstrap-sf1" rendered="{! !objectNode.dataSetWrapper.dataSet.Root__c }">
+                                    <label>Inherited Settings</label>
+                                    <div id="overrideActiveInputPanel" class="form-group" style="background-color: white;">
+                                        <div class="checkbox settingsCheckbox">
+                                            <label>
+                                                <apex:inputField value="{!objectNode.dataSetWrapper.dataSet.Override_Root_Settings__c}">
+                                                    Override Settings
+                                                    <apex:actionSupport event="onclick" action="{!toggleOverrideSettings}" rerender="overIgnoreNamespaceNameAll" />
+                                                </apex:inputField>
+                                            </label>
+                                            <div class="checkbox settingsCheckbox">
+                                                <apex:outputPanel layout="block" id="overIgnoreNamespaceNameAll">
+                                                    <apex:outputPanel >
+                                                        <label>
+                                                            <apex:inputCheckbox value="{!objectNode.dataSetWrapper.dataSet.PDRI__Ignore_Namespace__c}" disabled="{! !objectNode.dataSetWrapper.dataSet.Override_Root_Settings__c }">
+                                                                <apex:actionSupport event="onclick" rerender="overIgnoreNamespaceNameBlock" />
+                                                            </apex:inputCheckbox>
+                                                            Ignore Namespace
+                                                        </label>
+                                                    </apex:outputPanel>
+                                                    <apex:outputPanel id="overIgnoreNamespaceNameBlock" layout="block">
+                                                        <apex:outputPanel layout="block" style="margin-top: 10px;" styleClass="bootstrap-sf1" rendered="{!objectNode.dataSetWrapper.dataSet.PDRI__Ignore_Namespace__c}">
+                                                            <div class="form-group" style="background-color: white; margin-bottom: 0px;">
+                                                                <apex:inputText disabled="{! !objectNode.dataSetWrapper.dataSet.Override_Root_Settings__c }" html-placeholder="Enter name or leave blank to ignore any namespace for the object and field names..." value="{!objectNode.dataSetWrapper.dataSet.PDRI__Ignore_Namespace_Name__c}" styleClass="form-control" style="width: 50%;"/>
+                                                            </div>
+                                                        </apex:outputPanel>
+                                                    </apex:outputPanel>
+                                                </apex:outputPanel>
+                                            </div>
+                                            <div class="checkbox settingsCheckbox">
+                                                <apex:outputPanel layout="block" id="overCreateMissing">
+                                                    <apex:outputPanel >
+                                                        <label>
+                                                            <apex:inputCheckbox value="{!objectNode.dataSetWrapper.dataSet.PDRI__Create_Missing__c}" disabled="{! !objectNode.dataSetWrapper.dataSet.Override_Root_Settings__c }">
+                                                                <apex:actionSupport event="onclick" rerender="overCreateMissingBlock" />
+                                                            </apex:inputCheckbox>
+                                                            Create Missing Fields
+                                                        </label>
+                                                    </apex:outputPanel>
+                                                </apex:outputPanel>
+                                            </div>
+                                            <div class="checkbox settingsCheckbox">
+                                                <apex:outputPanel layout="block" id="overSyncPicklists">
+                                                    <apex:outputPanel >
+                                                        <label>
+                                                            <apex:inputCheckbox value="{!objectNode.dataSetWrapper.dataSet.PDRI__Create_Missing__c}" disabled="{! !objectNode.dataSetWrapper.dataSet.Override_Root_Settings__c }">
+                                                                <apex:actionSupport event="onclick" rerender="overSyncPicklistsBlock" />
+                                                            </apex:inputCheckbox>
+                                                            Sync Picklist Field Values
+                                                        </label>
+                                                    </apex:outputPanel>
+                                                </apex:outputPanel>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </apex:outputPanel> -->
+                            </div>
+                        </div>
+                        <div id="tab-fields" class="slds-tabs__content slds-hide" role="tabpanel">
+                            <apex:outputPanel id="fieldPanel">
+                                <!-- START OF SETTINGS MODAL -->
+                                <div class="slds slds-container--large slds-container--center">
+                                    <div class="main" role="main">
+                                        <div id="fieldSettingsDialog" class="slds-hide">
+                                            <div aria-hidden="false" role="dialog" class="slds-modal slds-fade-in-open">
+                                                <div class="slds-modal__container">
+                                                    <div class="slds-modal__header">
+                                                        <h2 class="slds-text-heading--medium">Field Settings</h2>
+                                                        <button onclick="toggleFieldSettings(); rerenderFieldSettings(); return false;" class="slds-button slds-modal__close">
+                                                            <img src="/resource/PDRI__SLDS080/SLDS080/assets/icons/action/close_60.png" alt="Close" />
+                                                            <span class="slds-assistive-text">Close</span>
+                                                        </button>
+                                                    </div>
+                                                    <div class="slds-modal__content esign-large-p-bottom">
+                                                        <div class="slds-form--stacked">
+                                                            <div class="slds-form-element">
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:outputPanel rendered="{! objectNode.dataSetWrapper.isUpsert }">
+                                                                        <div class="checkbox settingsCheckbox" style="margin-bottom: -5px; margin-top: -5px;">
+                                                                            <apex:outputPanel >
+                                                                                <label>
+                                                                                    <apex:inputCheckbox value="{!selectedFieldWrapper.isSelectedExternalId}">
+                                                                                        <apex:actionSupport event="onclick" action="{!onSelectFieldExternalId}" rerender="fieldSelectedPanel,failureAlertOutterPanel">
+                                                                                            <apex:param name="fieldSelected" value="{!selectedFieldWrapper.name}" assignTo="{!fieldSelected}"/>
+                                                                                        </apex:actionSupport>
+                                                                                    </apex:inputCheckbox>
+                                                                                    External ID
+                                                                                </label>
+                                                                            </apex:outputPanel>
+                                                                        </div>
+                                                                    </apex:outputPanel>
+                                                                </div>
+                                                            </div>
+                                                            <div class="slds-form-element">
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:outputPanel rendered="{! selectedFieldWrapper.isCustom && !objectNode.dataSetWrapper.dataSet.Create_Missing__c && !selectedFieldWrapper.isLookup }">
+                                                                        <div class="checkbox settingsCheckbox" style="margin-bottom: -5px; margin-top: -5px;">
+                                                                            <apex:outputPanel >
+                                                                                <label>
+                                                                                    <apex:inputCheckbox value="{!selectedFieldWrapper.isCreateMissing}"/>
+                                                                                    Create Missing
+                                                                                </label>
+                                                                            </apex:outputPanel>
+                                                                        </div>
+                                                                    </apex:outputPanel>
+                                                                </div>
+                                                            </div>
+                                                            <div class="slds-form-element">
+                                                                <div class="slds-form-element__control">
+                                                                    <apex:outputPanel >
+                                                                        <div class="checkbox settingsCheckbox" style="margin-bottom: -5px; margin-top: -5px;">
+                                                                            <apex:outputPanel rendered="{! selectedFieldWrapper.ftype == 'Picklist' && !objectNode.dataSetWrapper.dataSet.Sync_Picklist_Values__c && !selectedFieldWrapper.isLookup }" >
+                                                                                <label>
+                                                                                    <apex:inputCheckbox value="{!selectedFieldWrapper.isSyncPicklistValues}"/>
+                                                                                    Sync Picklist Values
+                                                                                </label>
+                                                                            </apex:outputPanel>
+                                                                        </div>
+                                                                    </apex:outputPanel>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="slds-modal__footer">
+                                                        <button onclick="toggleFieldSettings(); rerenderFieldSettings(); return false;" class="slds-button slds-button--neutral slds-button--brand">Close</button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="slds-modal-backdrop slds-modal-backdrop--open"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- END OF SETTINGS MODAL -->
+                                
+                                <div class="slds-form-element__control slds-m-top--small">
+                                    <input type="text" id="objectFieldSearchInput" placeholder="Query by field name..." value="{! objectSearchTerm }" class="slds-input slds-medium-size--1-of-3" onkeyup="var searchValue = document.getElementById('objectFieldSearchInput').value; searchFields(searchValue);"/>
+                                </div>
+                                            
+                                <div class="slds-form-element__control slds-m-top--large">
+                                    <label class="slds-checkbox">
+                                        <apex:inputField value="{!objectNode.dataSetWrapper.dataSet.PDRI__All_Fields__c}">
+                                            <apex:actionSupport event="onclick" action="{!onAllFieldsSet}" rerender="objectFieldsTable" />
+                                        </apex:inputField>
+                                        <span class="slds-checkbox--faux"></span>
+                                        <span class="slds-form-element__label">Copy All Fields</span>
+                                    </label>
+                                </div>
+                                
+                                <apex:outputPanel id="objectFieldsTable" layout="block">
+                                    <table class="slds-table slds-table--bordered slds-m-top--medium">
+                                        <thead>
+                                            <tr class="slds-text-heading--label">
+                                                <th class="slds-cell-shrink" scope="col">
+                                                    <label class="slds-checkbox">
+                                                        <apex:inputCheckbox value="{!isSelectAllFields}" id="select-all" disabled="{!objectNode.dataSetWrapper.dataSet.PDRI__All_Fields__c}">
+                                                            <apex:actionSupport event="onclick" action="{!onSelectAllFieldsToggleCheckbox}" rerender="objectFieldsTable" />
+                                                        </apex:inputCheckbox>
+                                                        <span class="slds-checkbox--faux"></span>
+                                                        <span class="slds-form-element__label slds-assistive-text">select all</span>
+                                                    </label>
+                                                </th>
+                                                <th scope="col">
+                                                    <span class="slds-truncate">Label</span>
+                                                </th>
+                                                <th scope="col">
+                                                    <span class="slds-truncate">API Name</span>
+                                                </th>
+                                                <th scope="col">
+                                                    <span class="slds-truncate">Namespace</span>
+                                                </th>
+                                                <th scope="col">
+                                                    <span class="slds-truncate">Type</span>
+                                                </th>
+                                                <th class="slds-row-action" scope="col">
+                                                    <span class="slds-truncate">Properties</span>
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <apex:repeat value="{!objectNode.filteredFieldWrappers}" var="fieldWrapper">
+                                                <tr class="slds-hint-parent">
+                                                    <td class="slds-row-select">
+                                                        <apex:outputPanel id="fieldSelectedPanel" rendered="{! !fieldWrapper.isLookup }">
+                                                            <label class="slds-checkbox">
+                                                                <apex:inputCheckbox value="{!fieldWrapper.isSelected}" disabled="{! ( objectNode.dataSetWrapper.isUpsert && fieldWrapper.isSelectedExternalId ) || ( objectNode.dataSetWrapper.dataSet.All_Fields__c ) }">
+                                                                    <apex:actionSupport event="onclick" action="{!onSelectField}" rerender="objectFieldsTable" />
+                                                                </apex:inputCheckbox>
+                                                                <span class="slds-checkbox--faux"></span>
+                                                                <span class="slds-form-element__label slds-assistive-text">select all</span>
+                                                            </label>
+                                                        </apex:outputPanel>
+                                                    </td>
+                                                    <td>
+                                                        <span class="slds-truncate">{!fieldWrapper.label}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="slds-truncate">{!fieldWrapper.localName}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="slds-truncate">{!fieldWrapper.namespace}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span class="slds-truncate">{!fieldWrapper.ftype}</span>
+                                                    </td>
+                                                    <td class="slds-row-action">
+                                                        <button onclick="openFieldSettingsDialog('{!fieldWrapper.name}'); return false;" class="slds-button slds-button--icon-border-filled slds-button--icon-x-small">
+                                                            <apex:image title="Select to configure" styleClass="invert-icon clickable-icon" value="/resource/PDRI__SLDS080/SLDS080/assets/icons/utility/settings_60.png" alt="Settings">
+                                                            </apex:image>
+                                                            <span class="slds-assistive-text">Show More</span>
+                                                        </button>
+                                                        <apex:outputPanel rendered="{! objectNode.dataSetWrapper.isUpsert && fieldWrapper.isSelectedExternalId }" title="External ID">
+                                                            <img class="invert-icon mark-icon" src="/resource/PDRI__SLDS080/SLDS080/assets/icons/action/apex_60.png" alt="External ID" />
+                                                        </apex:outputPanel>
+                                                        <apex:outputPanel rendered="{! fieldWrapper.isCreateMissing && !objectNode.dataSetWrapper.dataSet.Create_Missing__c }" title="Create Missing">
+                                                            <img class="invert-icon mark-icon" src="/resource/PDRI__SLDS080/SLDS080/assets/icons/action/new_60.png" alt="Create Missing" />
+                                                        </apex:outputPanel>
+                                                        <apex:outputPanel rendered="{! fieldWrapper.isSyncPicklistValues && !objectNode.dataSetWrapper.dataSet.Sync_Picklist_Values__c }" title="Sync Picklist Values">
+                                                            <img class="invert-icon mark-icon" src="/resource/PDRI__SLDS080/SLDS080/assets/icons/action/sort_60.png" alt="Sync Picklist Values" />
+                                                        </apex:outputPanel>
+                                                    </td>
+                                                </tr>
+                                            </apex:repeat>
+                                        </tbody>
+                                    </table>
+                                </apex:outputPanel>
+                            </apex:outputPanel>
+                        </div>
+                        <div id="tab-parents" class="slds-tabs__content slds-hide" role="tabpanel">
+                            <apex:outputPanel id="parentsPanel">
+                                <table class="slds-table slds-table--bordered slds-m-top--large">
+                                    <thead>
+                                        <tr class="slds-text-heading--label">
+                                            <th class="slds-cell-shrink" scope="col">
+                                            </th>
+                                            <th scope="col">
+                                                <span class="slds-truncate">Label</span>
+                                            </th>
+                                            <th scope="col">
+                                                <span class="slds-truncate">API Name</span>
+                                            </th>
+                                            <th scope="col">
+                                                <span class="slds-truncate">Parent Object Type</span>
+                                            </th>
+                                            <th scope="col">
+                                                <span class="slds-truncate">Parent Object API Name</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <apex:repeat value="{!objectNode.parentWrappers}" var="parentWrapper">
+                                            <tr class="slds-hint-parent">
+                                                <td class="slds-row-select">
+                                                    <label class="slds-checkbox">
+                                                        <apex:inputCheckbox disabled="{! parentWrapper.isDisabled }" value="{!parentWrapper.isSelected}">
+                                                            <apex:actionSupport event="onclick" action="{!onParentClick}" rerender="parentsPanel" onsubmit="startActionSelect();" oncomplete="endActionSelect();">
+                                                                <apex:param name="parentSelected" value="{!parentWrapper.name}" assignTo="{!parentSelected}"/>
+                                                            </apex:actionSupport>
+                                                        </apex:inputCheckbox>
+                                                        <span class="slds-checkbox--faux"></span>
+                                                        <span class="slds-form-element__label slds-assistive-text">select row1</span>
+                                                    </label>
+                                                </td>
+                                                <td>
+                                                    <apex:outputPanel rendered="{! !parentWrapper.isSelected || parentWrapper.isPolymorphic }">
+                                                        <span class="slds-truncate">{!parentWrapper.label}</span>
+                                                    </apex:outputPanel>
+                                                    <apex:outputPanel rendered="{! parentWrapper.isSelected && !parentWrapper.isPolymorphic }">
+                                                        <apex:commandLink action="{!onParentConfigure}" value="{!parentWrapper.label}" style="color: #3278BE;" styleClass="customLink" rerender="theForm">
+                                                            <apex:param name="parentSelected" value="{!parentWrapper.name}" assignTo="{!parentSelected}"/>
+                                                        </apex:commandLink>
+                                                    </apex:outputPanel>
+                                                </td>
+                                                <td>
+                                                    <span class="slds-truncate">{!parentWrapper.name}</span>
+                                                </td>
+                                                <td>
+                                                    <span class="slds-truncate">{!parentWrapper.parentLabel}</span>
+                                                </td>
+                                                <td>
+                                                    <span class="slds-truncate">{!parentWrapper.parentName}</span>
+                                                </td>
+                                            </tr>
+                                        </apex:repeat>
+                                    </tbody>
+                                </table>
+                            </apex:outputPanel>
+                        </div>
+                        <div id="tab-children" class="slds-tabs__content slds-hide" role="tabpanel">
+                            <div class="slds-form-element__control slds-m-top--small">
+                                <apex:inputText id="objectChildrenSearchInput" html-placeholder="Query by label, name or relationship name..." value="{! objectSearchTerm }" styleClass="slds-input slds-medium-size--1-of-3" onkeyup="searchChildren();"/>
+                            </div>
+                            <div class="slds-form-element__control slds-m-top--small">
+                                <label class="slds-checkbox">
+                                    <apex:inputCheckbox value="{!objectNode.dataSetWrapper.isSearchOnlyManagedChild}" onclick="searchChildren();"/>
+                                        <span class="slds-checkbox--faux"></span>
+                                        <span class="slds-form-element__label">Only Search Managed</span>
+                                </label>
+                            </div>
+                            <div class="slds-form-element__control slds-m-top--small">
+                                <apex:outputPanel id="objectChildrenNamespaceSearchPanel">
+                                    <apex:outputPanel rendered="{!objectNode.dataSetWrapper.isSearchOnlyManagedChild}">
+                                        <apex:inputText id="objectChildrenNamespaceSearchInput" html-placeholder="Limit namespace" value="{! objectNamespaceSearchTerm }" styleClass="slds-input slds-medium-size--1-of-3" onkeyup="searchChildrenNamespace();"/>
+                                    </apex:outputPanel>
+                                </apex:outputPanel>
+                            </div>
+                            <apex:outputPanel id="childrenPanel">
+                                <table class="slds-table slds-table--bordered slds-m-top--large">
+                                    <thead>
+                                        <tr class="slds-text-heading--label">
+                                            <th scope="col">
+                                            </th>
+                                            <th scope="col">
+                                                <span class="slds-truncate">Label</span>
+                                            </th>
+                                            <th scope="col">
+                                                <span class="slds-truncate">API Name</span>
+                                            </th>
+                                            <th scope="col">
+                                                <span class="slds-truncate">Relationship Name</span>
+                                            </th>
+                                            <th scope="col">
+                                                <span class="slds-truncate">Namespace</span>
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <apex:repeat value="{!objectNode.filteredChildWrappers}" var="childWrapper">
+                                            <tr class="slds-hint-parent">
+                                                <td class="slds-row-select">
+                                                    <label class="slds-checkbox">
+                                                        <apex:inputCheckbox value="{!childWrapper.isSelected}">
+                                                            <apex:actionSupport event="onclick" action="{!onChildClick}" rerender="childrenPanel" onsubmit="startActionSelect();" oncomplete="endActionSelect();">
+                                                                <apex:param name="childSelected" value="{!childWrapper.relationshipName}" assignTo="{!childSelected}"/>
+                                                            </apex:actionSupport>
+                                                        </apex:inputCheckbox>
+                                                        <span class="slds-checkbox--faux"></span>
+                                                        <span class="slds-form-element__label slds-assistive-text">select row1</span>
+                                                    </label>
+                                                </td>
+                                                <td>
+                                                    <apex:outputPanel rendered="{! !childWrapper.isSelected }">
+                                                        <span class="slds-truncate">{!childWrapper.label}</span>
+                                                    </apex:outputPanel>
+                                                    <apex:outputPanel rendered="{! childWrapper.isSelected }">
+                                                        <apex:commandLink action="{!onChildConfigure}" value="{!childWrapper.label}" style="color: #3278BE;" styleClass="customLink" rerender="theForm">
+                                                            <apex:param name="childSelected" value="{!childWrapper.relationshipName}" assignTo="{!childSelected}"/>
+                                                        </apex:commandLink>
+                                                    </apex:outputPanel>
+                                                </td>
+                                                <td>
+                                                    <span class="slds-truncate">{!childWrapper.name}</span>
+                                                </td>
+                                                <td>
+                                                    <span class="slds-truncate">{!childWrapper.relationshipFieldName}</span>
+                                                </td>
+                                                <td>
+                                                    <span class="slds-truncate">{!childWrapper.namespace}</span>
+                                                </td>
+                                            </tr>
+                                        </apex:repeat>
+                                    </tbody>
+                                </table>
+                            </apex:outputPanel>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </apex:form>
+</apex:page>

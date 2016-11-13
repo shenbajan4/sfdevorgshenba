@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomObject xmlns="http://soap.sforce.com/2006/04/metadata">
+    <customSettingsType>Hierarchy</customSettingsType>
+    <enableFeeds>false</enableFeeds>
+    <fields>
+        <fullName>Instance_Type__c</fullName>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Instance Type</label>
+        <length>255</length>
+        <required>false</required>
+        <trackTrending>false</trackTrending>
+        <type>Text</type>
+        <unique>false</unique>
+    </fields>
+    <fields>
+        <fullName>No_Record_Results__c</fullName>
+        <defaultValue>false</defaultValue>
+        <deprecated>false</deprecated>
+        <description>Enable this setting to stop storing individual record results in the source org overall deployment result tracking. Helps improve used data space, especially for large deployment sets.</description>
+        <externalId>false</externalId>
+        <inlineHelpText>Enable this setting to stop storing individual record results in the source org overall deployment result tracking. Helps improve used data space, especially for large deployment sets.</inlineHelpText>
+        <label>No Record Results</label>
+        <trackTrending>false</trackTrending>
+        <type>Checkbox</type>
+    </fields>
+    <fields>
+        <fullName>Object_Selector_Page_Size__c</fullName>
+        <defaultValue>900</defaultValue>
+        <deprecated>false</deprecated>
+        <externalId>false</externalId>
+        <label>Object Selector Page Size</label>
+        <precision>8</precision>
+        <required>false</required>
+        <scale>0</scale>
+        <trackTrending>false</trackTrending>
+        <type>Number</type>
+        <unique>false</unique>
+    </fields>
+    <label>Moover Settings</label>
+    <visibility>Public</visibility>
+</CustomObject>

@@ -1,0 +1,114 @@
+<!--
+*@purpose : Visualforce Page responsible for Selecting the Object and Fields for Migration
+*@author : Souvik    Date: 20.08.2013
+-->
+<apex:page controller="MFS.GetObjectNamesSourceOrg" sidebar="false">
+
+<!-- Calling the external CSS to be used in the page -->
+<apex:stylesheet value="{!URLFOR($Resource.MFS__CssDesignS2SMigration)}"/>
+
+<!-- Calling the external Javascript to be used in the page -->
+<script type="text/javascript" src="{!URLFOR($Resource.JsDesignS2SMigration)}"/>
+
+<apex:form id="GetObjectNames">
+   <apex:outputPanel id="pgMsg" >
+       <apex:sectionHeader title="{!$Label.mfs__SectionHeaderMigration}" rendered="{!objectLabel != NULL}" id="SecHead" subtitle="{!objectLabel}"/>
+       <apex:sectionHeader title="{!$Label.mfs__SectionHeaderMigration}" rendered="{!objectLabel == NULL}" subtitle="{!$Label.mfs__SecHeaderTitle}"/>
+       <apex:outputPanel rendered="{!pageMsg != NULL}">
+           <apex:pagemessages />
+       </apex:outputPanel>
+   </apex:outputPanel>
+   
+   <!-- PageBlock for Dynamic Migration -->
+   <apex:pageBlock id="block2" title="{!$Label.mfs__PageBlockTitleSrc}" >
+    <apex:outputPanel id="ObjectSection">
+    
+      <!-- PageBlockSection to display the Object Selection Section -->
+      <apex:pageblocksection columns="2" title="Object Selection Section">
+        <apex:panelGrid >
+          <b><u>Select the Object you want to share:</u> </b>
+          <apex:selectList value="{!objectName}" size="1">
+              <apex:actionSupport event="onchange" reRender="block2,ConnectionSection,pgMsg" action="{!populateFieldTable}" status="myStatus">
+              </apex:actionSupport>
+              <apex:selectOptions value="{!objectNames}"/>
+          </apex:selectList>
+        </apex:panelGrid><br/>
+      </apex:pageblocksection>
+      </apex:outputPanel>
+      
+      <!-- Panel to display the Connection Selection Section -->
+      <apex:outputPanel id="ConnectionSection" >
+      <apex:pageblocksection columns="8" title="{!$Label.mfs__PageBlockSecTitleConnection}" rendered="{!visibleButton = TRUE}">
+            <table>
+                <tr>
+                    <apex:panelGroup >
+                      <td>
+                        <b>{!$Label.mfs__AvailableCon}</b>
+                        <apex:selectList value="{!selected}" id="unselected_list" size="10" multiselect="true" style="width:250px">
+                            <apex:selectOptions value="{!AvailableList}">
+                             </apex:selectOptions>
+                        </apex:selectList>
+                      </td>
+                    </apex:panelGroup>
+                    <apex:panelGroup >
+                    <td style="padding-top:60px;">
+                        <apex:commandButton value="{!$Label.mfs__ForSelecting}" action="{!DoSelect}" reRender="selected_list,unselected_list" status="status"/><br/>
+                        <apex:commandButton value="{!$Label.mfs__ForUnselecting}" action="{!DoUnselect}" reRender="selected_list,unselected_list" status="status"/>
+                        <apex:actionStatus id="status">
+                           <apex:facet name="start">
+                                <apex:outputPanel >
+                                &nbsp;&nbsp;<apex:image value="http://cache.boston.com/universal/site_graphics/etaf/loading_icon.gif" style="height: 15px;"/>
+                                </apex:outputPanel>
+                           </apex:facet>
+                        </apex:actionStatus>
+                    </td>
+                    </apex:panelGroup>
+                     <apex:panelGroup >
+                    <td>
+                        <b>{!$Label.mfs__SelectedCon}</b>
+                        <apex:selectList value="{!unselected}" id="selected_list" size="10" multiselect="true" style="width:250px">
+                            <apex:selectOptions value="{!SelectedList}">
+                            </apex:selectOptions>
+                        </apex:selectList>
+                    </td>
+                     </apex:panelGroup>
+                    <apex:panelGroup >
+                    
+                    </apex:panelGroup>
+                </tr>
+            </table>
+        </apex:pageblocksection>
+        
+        <!-- PageBlock Section to display the Child Object Selection Section -->
+        <apex:pageblocksection title="{!$Label.mfs__PageBlockSecTitleChildObjs}" rendered="{!visibleButton = TRUE && visibleChildTable = TRUE}">
+        <apex:pageblockTable value="{!wrapListForDisplay}" var="child">
+            <apex:column headerValue="{!$Label.mfs__ChildObj}">
+              <apex:inputCheckbox value="{!child.selected}"/>
+            </apex:column>
+            <apex:column headerValue="{!$Label.mfs__ChildColSecond}">
+              <apex:outputText value="{!child.childObjectsLabel}"/>
+            </apex:column>
+        </apex:pageblockTable>
+        </apex:pageblocksection>
+        <apex:commandButton action="{!callBatchApex}" value="{!$Label.mfs__ShareRecordButton}" onclick="return approveMigration()" rendered="{!visibleButton = TRUE}"/>
+        </apex:outputPanel>
+   </apex:pageBlock>
+   
+   <!-- Action Status Section -->
+    <apex:actionStatus id="myStatus">
+           <apex:facet name="start">
+              <apex:outputPanel >
+                  <div class="background">
+                    <div class="transbox">
+                        <p>
+                        {!$Label.mfs__ActionStatusMsg}
+                        <apex:image value="/img/loading32.gif" style="height: 15px;"/>
+                        </p>
+                    </div>
+                  </div>
+              </apex:outputPanel>
+           </apex:facet>
+    </apex:actionStatus>
+      
+</apex:form>
+</apex:page>

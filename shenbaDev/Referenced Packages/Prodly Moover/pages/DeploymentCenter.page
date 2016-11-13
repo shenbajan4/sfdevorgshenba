@@ -1,0 +1,227 @@
+<apex:page controller="PDRI.DeploymentCenterController" 
+    title="Deployment Center" 
+    standardStylesheets="false">
+    
+    <script src="/soap/ajax/35.0/connection.js"></script>
+    <script src="/soap/ajax/35.0/apex.js" type="text/javascript"></script>
+    
+    <apex:stylesheet value="{!URLFOR($Resource.PDRI__SLDS080, 'SLDS080/assets/styles/salesforce-lightning-design-system-vf.css')}"/>
+    
+    <script type="text/javascript">
+        function queryCount(objectName, queryQualifiers, index) {
+            if( objectName == 'contentdocumentlink' ) {
+                document.getElementById("recordCountSpan" + index).textContent = "No Preview Available";
+                return;
+            }
+            
+            sforce.connection.sessionId = "{!$Api.Session_ID}";
+            var query = "SELECT count() FROM " + objectName + ( queryQualifiers == null || queryQualifiers == "" ? "" : " WHERE " + queryQualifiers );
+            
+            sforce.connection.query(query,
+               { onSuccess : queryCountPassed,
+                 onFailure : queryCountFailed,
+                 source : {
+                     index : index
+                 }
+           });
+
+        }
+        
+        function queryCountFailed(error, source) {
+            var countResult = error.get("faultstring");
+            document.getElementById("recordCountErrorSpan" + source.index).textContent = countResult;
+        }
+        
+        function queryCountPassed(queryResult, source) {
+            var countResult = queryResult.getInt("size");
+            document.getElementById("recordCountSpan" + source.index).textContent = countResult;
+        }
+        
+        function startDeploy() {
+            hideElemVisibility("settingsPanelAll");
+            showElemVisibility("progressSpinner"); 
+        }
+        
+        function stopDeploy() {
+            hideElemVisibility("progressSpinner");
+        }
+        
+        function hideElemVisibility(elemId) {
+            var elem = document.getElementById(elemId);
+            if( !elem ) {
+                return;
+            }
+            
+            var elemClass = elem.getAttribute("class");
+            
+            if( elemClass.indexOf("slds-show") != -1 ) {
+                elemClass = elemClass.replace("slds-show", "slds-hide");
+                elem.setAttribute("class", elemClass);
+            }
+        }
+         
+        function showElemVisibility(elemId) {
+            var elem = document.getElementById(elemId);
+            var elemClass = elem.getAttribute("class");
+            
+            if( elemClass.indexOf("slds-hide") != -1 ) {
+                elemClass = elemClass.replace("slds-hide", "slds-show");
+                elem.setAttribute("class", elemClass);
+            }
+        }
+    </script>
+    
+    <apex:form id="theForm">
+        <apex:outputPanel id="scriptsPanel" layout="block">                            
+            <apex:repeat value="{!filteredDataSetWrappers}" var="dataSetWrapper"> 
+                <script> 
+                    queryCount("{! dataSetWrapper.dataSet.ObjectName__c }", "{! JSENCODE(dataSetWrapper.dataSet.Query_Filter__c) }", "{! dataSetWrapper.index }"); 
+                </script> 
+            </apex:repeat>
+        </apex:outputPanel>
+                                                    
+        <apex:actionFunction action="{!onSearchDataSets}" name="searchDataSets" rerender="dataSetsPanel"/>
+        <apex:actionFunction oncomplete="stopDeploy();" action="{!doDeploy}" name="deployDataSet" rerender="theForm"/>
+        <apex:actionFunction oncomplete="if( {!isNoConnectionError} ) { window.location.href = 'apex/NewConnectionEditor'; }" action="{!onDismissAlert}" name="dismissAlert" rerender="theForm"/>
+        
+       <apex:outputPanel id="fullPanel" layout="block">
+       <div class="slds">
+            <div id="progressSpinner" class="slds-hide">
+                <div class="slds-grid slds-grid--align-center slds-m-vertical--xx-large">
+                    <div class="slds-spinner--large slds-m-vertical--xx-large">
+                        <img class="slds-m-vertical--xx-large" src="/resource/PDRI__SLDS080/SLDS080/assets/images/spinners/slds_spinner_brand.gif" alt="Loading..." />
+                    </div>
+                </div>
+            </div>
+            <apex:outputPanel id="alertPanel" layout="block" rendered="{!isAlertShown}">
+                <div class="slds-grid slds-m-top--large">
+                    <div class="slds-notify slds-notify--alert slds-theme--error slds-theme--inverse-text slds-theme--alert-texture slds-size--1-of-1" role="alert">
+                        <span class="slds-assistive-text">Info</span>
+                        <button onclick="dismissAlert(); return false;" class="slds-button slds-button--icon-inverse slds-notify__close">
+                            <img src="/resource/PDRI__SLDS080/SLDS080/assets/icons/action/close_60.png" alt="Close" class="slds-button__icon" />
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                        <h2>{!alertMessage}</h2>
+                    </div>
+                </div>
+            </apex:outputPanel>
+            <apex:outputPanel id="settingsPanel" rendered="{! !isAlertShown }">
+                <div id="settingsPanelAll" class="slds-show">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size--4-of-6">                
+                            <div role="form" class="slds-form--stacked slds-grid slds-wrap">
+                                <div class="slds-form-element slds-m-top--large slds-size--3-of-6">
+                                    <label class="slds-form-element__label" for="selectSample1"><div class="slds-text-heading--small">Destination Salesforce Organization</div></label>
+                                    <div class="slds-form-element__control slds-m-top--small">
+                                        <apex:selectList value="{!selectedTargetConnectionId}" size="1" required="true" styleClass="slds-select"> 
+                                            <apex:selectOptions value="{!targetConnectionOptions}"/>
+                                        </apex:selectList>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="slds-col"> 
+                            <div class="slds-button-group slds-m-top--large">
+                                <apex:outputPanel id="deployButtonPanel" layout="block">
+                                    <button id="deployButton" onclick="startDeploy(); deployDataSet(); return false;" class="slds-button slds-button--neutral">Deploy</button>      
+                                    <script>
+                                        setDeployButtonDisable();
+                                        
+                                        function setDeployButtonDisable() {
+                                            if( {!isDeployDisabled} ) {
+                                                document.getElementById('deployButton').disabled = true;
+                                            } else {
+                                                document.getElementById('deployButton').disabled = false;
+                                            }
+                                        }
+                                    </script>
+                                </apex:outputPanel>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-grid slds-m-top--x-large">
+                        <div class="slds-col">
+                            <div class="slds-form-element">
+                                <label class="slds-form-element__label"><div class="slds-text-heading--small">Deployment Selections</div></label>
+                                <div class="slds-form-element__control slds-m-top--small">
+                                    <apex:inputText id="dataSetSearchInput"  html-placeholder="Query by name, object, or namespace..." value="{! dataSetSearchTerm }" styleClass="slds-input slds-medium-size--1-of-3" onkeyup="searchDataSets();"/>
+                                </div>
+                                <div class="slds-form-element__control slds-m-top--small">
+                                    <label class="slds-checkbox">
+                                        <apex:inputCheckbox value="{!isShowHidden}">
+                                            <apex:actionSupport event="onclick" action="{!onSelectShowHidden}" rerender="dataSetsPanel,scriptsPanel" />
+                                        </apex:inputCheckbox>
+                                        <span class="slds-checkbox--faux"></span>
+                                        <span class="slds-form-element__label">Show Hidden Data Sets</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slds-grid slds-m-top--medium">
+                        <apex:outputPanel id="dataSetsPanel" layout="block">
+                            <div role="form" class="slds-form--stacked slds-grid slds-wrap">
+                                <div class="slds-form-element">
+                                    <div class="slds-form-element__control">
+                                        <table class="slds-table slds-table--bordered slds-m-top--medium">
+                                            <thead>
+                                                <tr class="slds-text-heading--label">
+                                                    <th class="slds-cell-shrink" scope="col">
+                                                    </th>
+                                                    <th scope="col">
+                                                        <span class="slds-truncate">Data Set Name</span>
+                                                    </th>
+                                                    <th scope="col">
+                                                        <span class="slds-truncate">Deployment Object</span>
+                                                    </th>
+                                                    <th scope="col">
+                                                        <span class="slds-truncate">Namespace</span>
+                                                    </th>
+                                                    <th scope="col">
+                                                        <span class="slds-truncate">Records to Deploy</span>
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <apex:repeat value="{!filteredDataSetWrappers}" var="dataSetWrapper">
+                                                    <tr class="slds-hint-parent">
+                                                        <td>
+                                                            <label class="slds-checkbox">
+                                                                <apex:inputCheckbox value="{!dataSetWrapper.isSelected}" disabled="{!dataSetWrapper.isDisabled}">
+                                                                    <apex:actionSupport event="onclick" action="{!onSelect}" rerender="deployButtonPanel"/>
+                                                                </apex:inputCheckbox>
+                                                                <span class="slds-checkbox--faux"></span>
+                                                                <span class="slds-form-element__label slds-assistive-text">select</span>
+                                                            </label>
+                                                        </td>
+                                                        <td>
+                                                            <span class="slds-truncate"><a href="javascript:window.open('/apex/DataSetEditor?id={!dataSetWrapper.dataSet.ID}', 'Data Set Editor');" class="slds-truncate">{!dataSetWrapper.dataSet.Name}</a></span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="slds-truncate">{!dataSetWrapper.objectLabel}</span>
+                                                        </td>
+                                                        <td>
+                                                            <span class="slds-truncate">{!dataSetWrapper.objectNamespace}</span>
+                                                        </td>
+                                                        <td>
+                                                            <apex:outputPanel id="queryCountSummaryPanel" layout="block">
+                                                                <span id="recordCountSpan{! dataSetWrapper.index }" class="slds-truncate">{!dataSetWrapper.rootRecordsCount}</span>
+                                                                <span id="recordCountErrorSpan{! dataSetWrapper.index }" style="color: red;" class="slds-truncate">{!dataSetWrapper.queryError}</span>
+                                                            </apex:outputPanel>
+                                                        </td>
+                                                    </tr>
+                                                </apex:repeat>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+        
+                        </apex:outputPanel>
+                    </div>
+                </div>
+            </apex:outputPanel>
+        </div>
+        </apex:outputPanel>     
+    </apex:form>
+</apex:page>

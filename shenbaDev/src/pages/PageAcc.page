@@ -1,0 +1,8 @@
+<apex:page standardController="Account">
+    <apex:pageBlock title="Retrieving Query String Parameters">
+        You are viewing the {!account.name} account.
+        You are viewing the {!account.id} account.
+        You are viewing the {!account.Ownership} account.
+        You are viewing the {!account.phone} account. 
+    </apex:pageBlock>
+</apex:page>

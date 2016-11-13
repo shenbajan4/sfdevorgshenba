@@ -1,0 +1,59 @@
+<apex:page showheader="true"
+    standardController="PDRI__Connection__c" 
+    extensions="PDRI.NewConnectionController" 
+    title="Create New Connection">
+    
+    <apex:stylesheet value="{!URLFOR($Resource.PDRI__SLDS080, 'SLDS080/assets/styles/salesforce-lightning-design-system-vf.css')}"/>
+    
+    <apex:form id="theForm">
+        <apex:actionFunction action="{!doConnect}" name="connect"/>
+        <apex:actionFunction action="{!onDismissAlert}" name="dismissAlert" rerender="theForm"/>
+        
+        <div class="slds">
+            <apex:outputPanel id="alertPanel" layout="block" rendered="{!isAlertShown}">
+                <div class="slds-grid slds-m-top--large">
+                    <div class="slds-notify slds-notify--alert slds-theme--warning slds-theme--inverse-text slds-theme--alert-texture slds-size--1-of-1" role="alert">
+                        <span class="slds-assistive-text">Info</span>
+                        <button onclick="dismissAlert(); return false;" class="slds-button slds-button--icon-inverse slds-notify__close">
+                            <img src="/resource/PDRI__SLDS080/SLDS080/assets/icons/action/close_60.png" alt="Close" class="slds-button__icon" />
+                            <span class="slds-assistive-text">Close</span>
+                        </button>
+                        <h2>{!alertMessage}</h2>
+                    </div>
+                </div>
+            </apex:outputPanel>
+            <apex:outputPanel id="settingsPanel">
+                <div id="settingsPanelAll" class="slds-show">
+                    <div class="slds-grid">
+                        <div class="slds-col slds-size--4-of-6"> 
+                            <apex:outputPanel rendered="{! NOT(isSourceConnection) }" layout="block">               
+                                <div role="form" class="slds-form--stacked slds-grid slds-wrap">
+                                    <div class="slds-form-element slds-m-top--large slds-size--3-of-6">
+                                        <label class="slds-form-element__label" for="selectSample1"><div class="slds-text-heading--small">Salesforce Organization Type</div></label>
+                                        <div class="slds-form-element__control slds-m-top--small">
+                                            <apex:selectList value="{!selectedOrgType}" size="1" required="true" styleClass="slds-select"> 
+                                                <apex:selectOptions value="{!orgTypeOptions}"/>
+                                            </apex:selectList>
+                                        </div>
+                                    </div>
+                                </div>
+                            </apex:outputPanel>             
+                                <div role="form" class="slds-form--stacked slds-grid slds-wrap">
+                                    <div class="slds-form-element slds-m-top--small slds-size--3-of-6">
+                                        <div class="slds-form-element__control slds-m-top--small">
+                                            <apex:inputText id="connectionNameInput"  html-placeholder="Enter optional custom connection name..." value="{! connectionName }" styleClass="slds-input"/>
+                                        </div>
+                                    </div>
+                                </div>
+                        </div>
+                        <div class="slds-col"> 
+                            <div class="slds-button-group slds-m-top--large">
+                                <button id="deployButton" onclick="connect(); return false;" class="slds-button slds-button--neutral">Connect</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </apex:outputPanel>
+        </div>
+    </apex:form>
+</apex:page>
